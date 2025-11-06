@@ -1,1 +1,1 @@
-# North Star SDK - The direction you need for interacting with Sonic 
+# North Star SDK - Guiding you to Sonic
