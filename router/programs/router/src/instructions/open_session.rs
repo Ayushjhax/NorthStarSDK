@@ -1,3 +1,5 @@
+use std::num::NonZero;
+
 use anchor_lang::prelude::*;
 
 use crate::{
@@ -48,8 +50,8 @@ impl<'info> OpenSession<'info> {
         grid_id: u64,
         allowed_programs: Vec<Pubkey>,
         allowed_opcodes: Vec<EmbeddedOpcode>,
-        ttl_slots: u64,
-        fee_cap: u64,
+        ttl_slots: NonZero<u64>,
+        fee_cap: NonZero<u64>,
     ) -> Result<()> {
         // Validate input sizes
         require!(

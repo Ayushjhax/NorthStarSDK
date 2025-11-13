@@ -1,3 +1,5 @@
+use std::num::NonZero;
+
 use anchor_lang::prelude::*;
 
 use crate::types::EmbeddedOpcode;
@@ -16,9 +18,9 @@ pub struct Session {
     // XXX: this can be bitmap
     pub allowed_opcodes: Vec<EmbeddedOpcode>,
     /// Time-to-live in slots
-    pub ttl_slots: u64,
+    pub ttl_slots: NonZero<u64>,
     /// Maximum fee budget for this session
-    pub fee_cap: u64,
+    pub fee_cap: NonZero<u64>,
     /// Current nonce (for replay protection)
     pub nonce: u128,
     /// Creation timestamp
@@ -47,7 +49,7 @@ impl Session {
     /// Check if session is expired
     pub fn is_expired(&self, current_slot: u64) -> bool {
         let creation_slot = (self.created_at / 400) as u64; // ~400ms per slot
-        current_slot > creation_slot + self.ttl_slots
+        current_slot > creation_slot + self.ttl_slots.get()
     }
     /// Check if program is allowed
     pub fn is_program_allowed(&self, program: &Pubkey) -> bool {

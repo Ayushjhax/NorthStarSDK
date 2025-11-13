@@ -109,7 +109,7 @@ impl<'info> SendMessage<'info> {
 
         // Check fee budget doesn't exceed session fee cap
         require!(
-            fee_budget <= self.session.fee_cap,
+            fee_budget <= self.session.fee_cap.get(),
             RouterError::FeeCapExceeded
         );
 

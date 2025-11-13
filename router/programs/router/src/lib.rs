@@ -1,3 +1,5 @@
+use std::num::NonZero;
+
 use anchor_lang::prelude::*;
 
 declare_id!("J6YB6HFjFecHKRvgfWwqa6sAr2DhR2k7ArvAd6NG7mBo");
@@ -22,8 +24,8 @@ pub mod router {
         grid_id: u64,
         allowed_programs: Vec<Pubkey>,
         allowed_opcodes: Vec<EmbeddedOpcode>,
-        ttl_slots: u64,
-        fee_cap: u64,
+        ttl_slots: NonZero<u64>,
+        fee_cap: NonZero<u64>,
     ) -> Result<()> {
         ctx.accounts.open_session(
             grid_id,
