@@ -141,6 +141,7 @@ impl<'info> SendMessage<'info> {
             session: self.session.key(),
             fee_budget,
             msg: msg.clone(),
+            // TODO: add signing
             sig: [0u8; 64],
         };
 

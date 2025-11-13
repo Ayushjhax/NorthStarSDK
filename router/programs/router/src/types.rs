@@ -45,6 +45,7 @@ pub struct EmbeddedParams {
 
 /// Simplified account metadata that can be serialized
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+// TODO: this will be obsolete once anchor upgrades to borsh v1
 pub struct SerializableAccountMeta {
     pub pubkey: Pubkey,
     pub is_signer: bool,
@@ -115,6 +116,7 @@ pub struct OutboxEntry {
     /// The Sonic message
     pub msg: SonicMsg,
     /// Signature over the entry
+    // TODO: Make it propper signature
     pub sig: [u8; 64],
 }
 
