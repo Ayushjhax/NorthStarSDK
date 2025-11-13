@@ -7,7 +7,10 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
-    "demo": "ts-node examples/read-demo.ts"
+    "demo": "ts-node examples/read-demo.ts",
+    "demo:full": "ts-node examples/full-integration-demo.ts",
+    "demo:e2e": "ts-node examples/read-from-sonic-demo.ts",
+    "demo:sonic-counter": "ts-node examples/sonic-counter/counter-demo.ts"
   },
   "keywords": [
     "solana",

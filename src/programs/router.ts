@@ -3,14 +3,14 @@
  * Provides transaction instruction structures for Sonic Grid operations
  */
 
-import { Address, address } from '@solana/addresses';
+import { Address, address, getProgramDerivedAddress } from '@solana/addresses';
 
 /**
  * SonicRouter Program ID
- * Update this when the on-chain program is deployed
+ * Deployed on Solana Testnet and Devnet
  */
 export const SONIC_ROUTER_PROGRAM_ID: Address = address(
-  '11111111111111111111111111111111'
+  'J6YB6HFjFecHKRvgfWwqa6sAr2DhR2k7ArvAd6NG7mBo'
 );
 
 /**
@@ -148,14 +148,32 @@ export class RouterProgram {
   }
 
   /**
-   * Derive session PDA
-   * Generates a deterministic session address from owner and grid ID
+   * Derive session PDA using Kit's proper PDA derivation
+   * Seeds: ["session", owner, grid_id]
    */
   static async deriveSessionPDA(
     owner: Address,
     gridId: number
   ): Promise<Address> {
-    return `${owner}_session_${gridId}` as Address;
+    
+    // Convert grid_id to little-endian bytes
+    const gridIdBytes = new Uint8Array(8);
+    let tempGridId = gridId;
+    for (let i = 0; i < 8; i++) {
+      gridIdBytes[i] = tempGridId & 0xff;
+      tempGridId = tempGridId >> 8;
+    }
+
+    const [pda] = await getProgramDerivedAddress({
+      programAddress: SONIC_ROUTER_PROGRAM_ID,
+      seeds: [
+        'session',
+        owner,
+        gridIdBytes
+      ],
+    });
+    
+    return pda;
   }
 }
 

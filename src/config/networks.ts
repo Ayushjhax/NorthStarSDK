@@ -10,8 +10,10 @@ export interface NetworkConfig {
     devnet: string;
   };
   sonic: {
-    grid1: string;
-    rpc: string;
+    devnet: string;
+    testnet: string;
+    mainnet: string;
+    grid: string;
   };
   hssn: {
     exapi: string;
@@ -28,8 +30,10 @@ export const NETWORKS: NetworkConfig = {
     devnet: 'https://api.devnet.solana.com'
   },
   sonic: {
-    grid1: 'https://api-dev.hypergrid.dev',
-    rpc: 'https://api.testnet.sonic.game'
+    devnet: 'https://sonic.helius-rpc.com/',
+    testnet: 'https://api.testnet.sonic.game',
+    mainnet: 'https://api.mainnet-alpha.sonic.game',
+    grid: 'https://api.grid.sonic.game'
   },
   hssn: {
     exapi: 'https://exapi-hssn.testnet.sonic.game'

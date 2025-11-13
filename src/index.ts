@@ -33,8 +33,9 @@ export class NorthStarSDK {
       NETWORKS.solana[config.solanaNetwork];
     this.rpc = createSolanaRpc(solanaRpc);
 
-    // Initialize Sonic reader
-    const sonicRpc = config.customEndpoints?.sonic || NETWORKS.sonic.rpc;
+    // Initialize Sonic reader - use matching network
+    const sonicRpc = config.customEndpoints?.sonic || 
+                     NETWORKS.sonic[config.solanaNetwork];
     this.sonicReader = new SonicReader(sonicRpc);
 
     // Initialize HSSN reader

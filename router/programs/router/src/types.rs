@@ -1,0 +1,108 @@
+use anchor_lang::prelude::*;
+
+/// Message types for Sonic execution
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
+pub enum MsgKind {
+    /// Invoke mode: User specifies target_program, accounts, data
+    Invoke,
+    /// Embedded mode: User specifies opcode and params; Sonic resolves accounts
+    Embedded,
+}
+
+/// Embedded operation opcodes
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
+pub enum EmbeddedOpcode {
+    /// Swap operation
+    Swap,
+    // Future: Route, AddLiquidity, etc.
+}
+
+/// Parameters for embedded swap operation
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct EmbeddedParams {
+    /// Input token mint
+    pub in_mint: Pubkey,
+    /// Output token mint
+    pub out_mint: Pubkey,
+    /// Amount to swap
+    pub amount_in: u64,
+    /// Slippage tolerance in basis points
+    pub slippage_bps: u16,
+    /// Deadline slot for execution
+    pub deadline_slot: u64,
+    /// Expected execution plan hash (0 = none)
+    pub expected_plan_hash: [u8; 32],
+}
+
+/// Simplified account metadata that can be serialized
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct SerializableAccountMeta {
+    pub pubkey: Pubkey,
+    pub is_signer: bool,
+    pub is_writable: bool,
+}
+
+impl From<AccountMeta> for SerializableAccountMeta {
+    fn from(meta: AccountMeta) -> Self {
+        Self {
+            pubkey: meta.pubkey,
+            is_signer: meta.is_signer,
+            is_writable: meta.is_writable,
+        }
+    }
+}
+
+impl Into<AccountMeta> for SerializableAccountMeta {
+    fn into(self) -> AccountMeta {
+        AccountMeta {
+            pubkey: self.pubkey,
+            is_signer: self.is_signer,
+            is_writable: self.is_writable,
+        }
+    }
+}
+
+/// Invoke mode parameters
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct InvokeCall {
+    /// Target program to invoke on Sonic
+    pub target_program: Pubkey,
+    /// Accounts required for the call
+    pub accounts: Vec<SerializableAccountMeta>,
+    /// Instruction data
+    pub data: Vec<u8>,
+}
+
+/// Sonic message structure
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct SonicMsg {
+    /// Target grid ID
+    pub grid_id: u64,
+    /// Message type (Invoke or Embedded)
+    pub kind: MsgKind,
+    /// Invoke call parameters (if Invoke mode)
+    pub invoke: Option<InvokeCall>,
+    /// Embedded opcode (if Embedded mode)
+    pub opcode: Option<EmbeddedOpcode>,
+    /// Embedded parameters (if Embedded mode)
+    pub params: Option<EmbeddedParams>,
+    /// Nonce for replay protection
+    pub nonce: u128,
+    /// Time-to-live in slots
+    pub ttl_slots: u64,
+}
+
+/// Outbox entry structure
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct OutboxEntry {
+    /// Entry owner
+    pub owner: Pubkey,
+    /// Associated session
+    pub session: Pubkey,
+    /// Fee budget for this entry
+    pub fee_budget: u64,
+    /// The Sonic message
+    pub msg: SonicMsg,
+    /// Signature over the entry
+    pub sig: [u8; 64],
+}
