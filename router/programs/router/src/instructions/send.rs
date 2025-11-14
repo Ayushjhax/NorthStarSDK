@@ -149,10 +149,11 @@ impl<'info> SendMessage<'info> {
         // Compute entry hash
         let entry_id = entry.hash();
 
-        // Update Merkle root
-        // XXX: store hashes once anchor upgrades to borsh v1
-        // https://github.com/solana-foundation/anchor/pull/4012
-        self.outbox.merkle_root = entry_id.to_bytes();
+        // Update Merkle root using incremental hash chain
+        // This implements: hash(prev_merkle_root || entry_hash)
+        // This ensures the entire history of entries is cryptographically
+        // committed in the root, allowing verification of all previous entries.
+        self.outbox.update_merkle_root(entry_id);
 
         // Deduct fee from vault
         self.fee_vault.withdraw(fee_budget)?;
