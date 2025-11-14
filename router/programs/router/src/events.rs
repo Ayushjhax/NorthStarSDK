@@ -1,3 +1,5 @@
+use std::num::NonZero;
+
 use anchor_lang::prelude::*;
 
 use crate::types::SonicMsg;
@@ -12,15 +14,16 @@ pub struct SessionOpened {
     /// Target grid ID
     pub grid_id: u64,
     /// Time-to-live in slots
-    pub ttl_slots: u64,
+    pub ttl_slots: NonZero<u64>,
     /// Fee cap for the session
-    pub fee_cap: u64,
+    pub fee_cap: NonZero<u64>,
 }
 
 /// Event emitted when an entry is committed to the outbox
 #[event]
 pub struct EntryCommitted {
     /// Unique entry identifier (hash)
+    // XXX: once anchor upgrades to borsh v1 use `solana_hash::Hash`
     pub entry_id: [u8; 32],
     /// Associated session
     pub session: Pubkey,

@@ -1,3 +1,5 @@
+use std::num::NonZero;
+
 use anchor_lang::prelude::*;
 
 declare_id!("J6YB6HFjFecHKRvgfWwqa6sAr2DhR2k7ArvAd6NG7mBo");
@@ -7,7 +9,6 @@ pub mod events;
 pub mod instructions;
 pub mod state;
 pub mod types;
-pub mod utils;
 
 use instructions::*;
 use types::*;
@@ -22,9 +23,9 @@ pub mod router {
         ctx: Context<OpenSession>,
         grid_id: u64,
         allowed_programs: Vec<Pubkey>,
-        allowed_opcodes: Vec<u8>,
-        ttl_slots: u64,
-        fee_cap: u64,
+        allowed_opcodes: Vec<EmbeddedOpcode>,
+        ttl_slots: NonZero<u64>,
+        fee_cap: NonZero<u64>,
     ) -> Result<()> {
         ctx.accounts.open_session(
             grid_id,
@@ -49,7 +50,8 @@ pub mod router {
     /// Commits an intent to the OutboxPDA for relaying to Sonic
     pub fn send_message(
         ctx: Context<SendMessage>,
-        grid_id: u64,
+        // TODO: use grid_id
+        _grid_id: u64,
         msg: SonicMsg,
         fee_budget: u64,
     ) -> Result<()> {
@@ -57,7 +59,11 @@ pub mod router {
     }
 
     /// Close an expired session and refund unused fees
-    pub fn close_expired(ctx: Context<CloseExpired>, grid_id: u64) -> Result<()> {
+    pub fn close_expired(
+        ctx: Context<CloseExpired>,
+        // TODO: use grid_id
+        _grid_id: u64,
+    ) -> Result<()> {
         ctx.accounts.close_expired()
     }
 }

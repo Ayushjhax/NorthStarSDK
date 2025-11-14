@@ -1,9 +1,12 @@
+use std::num::NonZero;
+
 use anchor_lang::prelude::*;
 
 use crate::{
     errors::RouterError,
     events::SessionOpened,
     state::{FeeVault, Session},
+    types::EmbeddedOpcode,
 };
 
 #[derive(Accounts)]
@@ -46,9 +49,9 @@ impl<'info> OpenSession<'info> {
         &mut self,
         grid_id: u64,
         allowed_programs: Vec<Pubkey>,
-        allowed_opcodes: Vec<u8>,
-        ttl_slots: u64,
-        fee_cap: u64,
+        allowed_opcodes: Vec<EmbeddedOpcode>,
+        ttl_slots: NonZero<u64>,
+        fee_cap: NonZero<u64>,
     ) -> Result<()> {
         // Validate input sizes
         require!(
@@ -69,7 +72,7 @@ impl<'info> OpenSession<'info> {
             ttl_slots,
             fee_cap,
             nonce: 0,
-            created_at: Clock::get()?.unix_timestamp,
+            created_at: Clock::get()?.slot,
             bump: self.session.bump,
         });
 

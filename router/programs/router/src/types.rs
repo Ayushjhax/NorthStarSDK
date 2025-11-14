@@ -1,20 +1,20 @@
 use anchor_lang::prelude::*;
-
-/// Message types for Sonic execution
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
-pub enum MsgKind {
-    /// Invoke mode: User specifies target_program, accounts, data
-    Invoke,
-    /// Embedded mode: User specifies opcode and params; Sonic resolves accounts
-    Embedded,
-}
+use solana_hash::Hash;
 
 /// Embedded operation opcodes
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
+#[derive(
+    Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, AnchorSerialize, AnchorDeserialize,
+)]
+// TODO: add
+// #[borsh(use_discriminant = true)]
 pub enum EmbeddedOpcode {
     /// Swap operation
     Swap,
     // Future: Route, AddLiquidity, etc.
+}
+
+impl EmbeddedOpcode {
+    pub const SIZE: usize = 1;
 }
 
 /// Parameters for embedded swap operation
@@ -36,6 +36,7 @@ pub struct EmbeddedParams {
 
 /// Simplified account metadata that can be serialized
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+// TODO: this will be obsolete once anchor upgrades to borsh v1
 pub struct SerializableAccountMeta {
     pub pubkey: Pubkey,
     pub is_signer: bool,
@@ -52,25 +53,31 @@ impl From<AccountMeta> for SerializableAccountMeta {
     }
 }
 
-impl Into<AccountMeta> for SerializableAccountMeta {
-    fn into(self) -> AccountMeta {
+impl From<SerializableAccountMeta> for AccountMeta {
+    fn from(val: SerializableAccountMeta) -> Self {
         AccountMeta {
-            pubkey: self.pubkey,
-            is_signer: self.is_signer,
-            is_writable: self.is_writable,
+            pubkey: val.pubkey,
+            is_signer: val.is_signer,
+            is_writable: val.is_writable,
         }
     }
 }
 
 /// Invoke mode parameters
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct InvokeCall {
-    /// Target program to invoke on Sonic
-    pub target_program: Pubkey,
-    /// Accounts required for the call
-    pub accounts: Vec<SerializableAccountMeta>,
-    /// Instruction data
-    pub data: Vec<u8>,
+pub enum SonicMsgInner {
+    InvokeCall {
+        /// Target program to invoke on Sonic
+        target_program: Pubkey,
+        /// Accounts required for the call
+        accounts: Vec<SerializableAccountMeta>,
+        /// Instruction data
+        data: Vec<u8>,
+    },
+    EmbeddedOpcode {
+        opcode: EmbeddedOpcode,
+        params: EmbeddedParams,
+    },
 }
 
 /// Sonic message structure
@@ -78,18 +85,12 @@ pub struct InvokeCall {
 pub struct SonicMsg {
     /// Target grid ID
     pub grid_id: u64,
-    /// Message type (Invoke or Embedded)
-    pub kind: MsgKind,
-    /// Invoke call parameters (if Invoke mode)
-    pub invoke: Option<InvokeCall>,
-    /// Embedded opcode (if Embedded mode)
-    pub opcode: Option<EmbeddedOpcode>,
-    /// Embedded parameters (if Embedded mode)
-    pub params: Option<EmbeddedParams>,
     /// Nonce for replay protection
     pub nonce: u128,
     /// Time-to-live in slots
     pub ttl_slots: u64,
+    /// Inner message
+    pub inner: SonicMsgInner,
 }
 
 /// Outbox entry structure
@@ -104,5 +105,19 @@ pub struct OutboxEntry {
     /// The Sonic message
     pub msg: SonicMsg,
     /// Signature over the entry
+    // TODO: Make it proper signature
     pub sig: [u8; 64],
+}
+
+impl OutboxEntry {
+    pub fn hash(&self) -> Hash {
+        let mut hasher = solana_sha256_hasher::Hasher::default();
+        hasher.hashv(&[
+            self.owner.as_array(),
+            self.session.as_array(),
+            &self.fee_budget.to_le_bytes(),
+            &self.msg.nonce.to_le_bytes(),
+        ]);
+        hasher.result()
+    }
 }

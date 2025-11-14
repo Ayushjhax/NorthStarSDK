@@ -4,10 +4,10 @@ use crate::{
     errors::RouterError,
     events::EntryCommitted,
     state::{FeeVault, Outbox, Session},
-    types::{MsgKind, OutboxEntry, SonicMsg},
-    utils::compute_entry_hash,
+    types::{OutboxEntry, SonicMsg, SonicMsgInner},
 };
 
+// TODO: this can be removed and lazily initialized with `SendMessage` instead
 #[derive(Accounts)]
 pub struct InitOutbox<'info> {
     #[account(
@@ -110,7 +110,7 @@ impl<'info> SendMessage<'info> {
 
         // Check fee budget doesn't exceed session fee cap
         require!(
-            fee_budget <= self.session.fee_cap,
+            fee_budget <= self.session.fee_cap.get(),
             RouterError::FeeCapExceeded
         );
 
@@ -121,26 +121,19 @@ impl<'info> SendMessage<'info> {
         );
 
         // Validate allowed programs/opcodes based on message kind
-        match msg.kind {
-            MsgKind::Invoke => {
-                if let Some(ref invoke) = msg.invoke {
-                    require!(
-                        self.session.is_program_allowed(&invoke.target_program),
-                        RouterError::UnauthorizedProgram
-                    );
-                }
-            }
-            MsgKind::Embedded => {
-                if let Some(ref opcode) = msg.opcode {
-                    let opcode_byte = match opcode {
-                        crate::types::EmbeddedOpcode::Swap => 0,
-                    };
-                    require!(
-                        self.session.is_opcode_allowed(opcode_byte),
-                        RouterError::UnauthorizedOpcode
-                    );
-                }
-            }
+        match msg.inner {
+            SonicMsgInner::InvokeCall {
+                target_program,
+                accounts: _,
+                data: _,
+            } => require!(
+                self.session.is_program_allowed(&target_program),
+                RouterError::UnauthorizedProgram
+            ),
+            SonicMsgInner::EmbeddedOpcode { opcode, params: _ } => require!(
+                self.session.is_opcode_allowed(opcode),
+                RouterError::UnauthorizedOpcode
+            ),
         }
 
         // Create outbox entry
@@ -149,23 +142,17 @@ impl<'info> SendMessage<'info> {
             session: self.session.key(),
             fee_budget,
             msg: msg.clone(),
+            // TODO: add signing
             sig: [0u8; 64],
         };
 
-        
-
         // Compute entry hash
-        let entry_id = compute_entry_hash(&entry)?;
-
-        // Update outbox
-        self.outbox.entry_count = self
-            .outbox
-            .entry_count
-            .checked_add(1)
-            .ok_or(RouterError::ArithmeticOverflow)?;
+        let entry_id = entry.hash();
 
         // Update Merkle root
-        self.outbox.merkle_root = entry_id;
+        // XXX: store hashes once anchor upgrades to borsh v1
+        // https://github.com/solana-foundation/anchor/pull/4012
+        self.outbox.merkle_root = entry_id.to_bytes();
 
         // Deduct fee from vault
         self.fee_vault.withdraw(fee_budget)?;
@@ -175,18 +162,25 @@ impl<'info> SendMessage<'info> {
             .session
             .nonce
             .checked_add(1)
-            .ok_or(RouterError::ArithmeticOverflow)?;
+            .expect("Realistically never overflows within realistic `ttl_slots`");
 
         // Emit event
         emit!(EntryCommitted {
-            entry_id,
+            entry_id: entry_id.to_bytes(),
             session: self.session.key(),
             msg: msg.clone(),
             fee_budget,
-            entry_index: self.outbox.entry_count - 1,
+            entry_index: self.outbox.entry_count,
         });
 
-        msg!("Entry committed: {:?}", entry_id);
+        // Update outbox
+        self.outbox.entry_count = self
+            .outbox
+            .entry_count
+            .checked_add(1)
+            .ok_or(RouterError::ArithmeticOverflow)?;
+
+        msg!("Entry committed: {}", entry_id);
         msg!("Nonce incremented to: {}", self.session.nonce);
 
         Ok(())
