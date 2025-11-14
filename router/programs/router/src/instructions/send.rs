@@ -162,7 +162,7 @@ impl<'info> SendMessage<'info> {
             .session
             .nonce
             .checked_add(1)
-            .ok_or(RouterError::ArithmeticOverflow)?;
+            .expect("Realistically never overflows within realistic `ttl_slots`");
 
         // Emit event
         emit!(EntryCommitted {

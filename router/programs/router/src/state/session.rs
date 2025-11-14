@@ -49,7 +49,7 @@ impl Session {
     /// Check if session is expired
     pub fn is_expired(&self, current_slot: u64) -> bool {
         let creation_slot = (self.created_at / 400) as u64; // ~400ms per slot
-        current_slot > creation_slot + self.ttl_slots.get()
+        current_slot > creation_slot.saturating_add(self.ttl_slots.get())
     }
     /// Check if program is allowed
     pub fn is_program_allowed(&self, program: &Pubkey) -> bool {

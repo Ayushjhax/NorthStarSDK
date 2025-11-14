@@ -19,14 +19,10 @@ anchor-debug = []
 custom-heap = []
 custom-panic = []
 
-
 [dependencies]
 anchor-lang = "0.32.1"
 solana-hash = "2.3"
 solana-sha256-hasher = "2.3"
 
-
-[lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = [
-    'cfg(target_os, values("solana"))',
-] }
+[lints]
+workspace = true
