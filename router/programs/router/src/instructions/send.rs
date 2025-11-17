@@ -51,17 +51,8 @@ pub struct SendMessage<'info> {
 
 impl<'info> SendMessage<'info> {
     pub fn send_message(&mut self, msg: SonicMsg, fee_budget: u64) -> Result<()> {
-        if self.outbox.authority == Pubkey::default() {
-            self.outbox.set_inner(Outbox {
-                authority: self.owner.key(),
-                entry_count: 0,
-                merkle_root: [0u8; 32],
-                bump: self.outbox.bump,
-            });
-        }
-
         require!(
-            self.outbox.authority == self.owner.key(),
+            self.outbox.authority == Pubkey::default() || self.outbox.authority == self.owner.key(),
             RouterError::UnauthorizedProgram
         );
 
@@ -127,13 +118,17 @@ impl<'info> SendMessage<'info> {
         };
 
         // Compute entry hash
-        let entry_id = entry.hash();
-        
-        // Update Merkle root using incremental hash chain
-        // This implements: hash(prev_merkle_root || entry_hash)
-        // This ensures the entire history of entries is cryptographically
-        // committed in the root, allowing verification of all previous entries.
-        self.outbox.update_merkle_root(entry_id);
+        let entry_id = entry.hash().to_bytes();
+
+        // Lazy initialize outbox if needed
+        if self.outbox.authority == Pubkey::default() {
+            self.outbox.set_inner(Outbox {
+                authority: self.owner.key(),
+                entry_count: 0,
+                merkle_root: entry_id,
+                bump: self.outbox.bump,
+            });
+        }
 
         // Deduct fee from vault
         self.fee_vault.withdraw(fee_budget)?;
@@ -147,7 +142,7 @@ impl<'info> SendMessage<'info> {
 
         // Emit event
         emit!(EntryCommitted {
-            entry_id: entry_id.to_bytes(),
+            entry_id,
             session: self.session.key(),
             msg: msg.clone(),
             fee_budget,
@@ -161,7 +156,7 @@ impl<'info> SendMessage<'info> {
             .checked_add(1)
             .ok_or(RouterError::ArithmeticOverflow)?;
 
-        msg!("Entry committed: {}", entry_id);
+        msg!("Entry committed: {:?}", entry_id);
         msg!("Nonce incremented to: {}", self.session.nonce);
 
         Ok(())

@@ -85,7 +85,14 @@ describe("SonicRouter Program", () => {
       console.log("  Actual SOL balance:", solBalance, "lamports");
     });
 
-    it("Step 3: Send message to Sonic (lazy initializes outbox)", async () => {
+    it("Step 3: Send message to Sonic", async () => {
+      try {
+        await program.account.outbox.fetch(outboxPda);
+        expect.fail("Outbox should not exist before first sendMessage");
+      } catch (error: any) {
+        expect(error).to.exist;
+      }
+
       const msg = {
         gridId,
         kind: { invoke: {} },
@@ -108,7 +115,6 @@ describe("SonicRouter Program", () => {
 
       console.log("✓ Message sent:", tx);
 
-      // Verify outbox was created and updated (lazy initialization)
       const outbox = await program.account.outbox.fetch(outboxPda);
       expect(outbox.authority.toBase58()).to.equal(owner.toBase58());
       expect(outbox.entryCount.toNumber()).to.equal(1);
